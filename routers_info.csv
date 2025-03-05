@@ -1,0 +1,4 @@
+device_type,host,username,password
+cisco_ios,2001:db8:1::2,admin,admin
+cisco_ios,2001:1111:2222:3333::1,admin,admin
+cisco_ios,2001:1111:2222:3333:C805:17FF:FE5F:0,admin,admin

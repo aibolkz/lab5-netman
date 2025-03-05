@@ -1,3 +1,4 @@
+#/usr/bin/env python3
 import csv
 import json
 import time
@@ -92,13 +93,13 @@ def fetch_snmp_data(router_ips, oids):
 
     return snmp_data
 
-# save snmp data to json file
+#snmp  to json file
 def save_snmp_data(snmp_data, filename="snmp_data.txt"):
     with open(filename, "w", encoding="utf8") as file:
         json.dump(snmp_data, file, indent=4)
     print(f"\nsnmp data saved to {filename}")
 
-# display snmp data in table
+#snmp data in table
 def display_snmp_data(snmp_data):
     table = PrettyTable(["Router", "IPv4 Addresses", "IPv6 Addresses", "Interfaces", "CPU Utilization"])
     
@@ -112,7 +113,8 @@ def display_snmp_data(snmp_data):
     print("\nSNMP Data Summary:\n")
     print(table)
 
-# monitor cpu utilization for 2 minutes
+#cpu utilization for 2 minutes
+#value for testing is 60 and 10 secs
 def monitor_cpu(router_ip, oid, duration=60, interval=10):
     print("\nmonitoring cpu utilization of r1 for 2 minutes...")
     cpu_data = []
