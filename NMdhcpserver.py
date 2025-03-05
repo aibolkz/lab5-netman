@@ -2,12 +2,13 @@
 import csv
 import json
 from netmiko import ConnectHandler
+import time
 
-# csv and json file paths
+#csv and json file paths
 ROUTERS_INFO_CSV = "routers_info.csv"
 MAC_JSON = "mac_addr.json"
 
-# load router credentials from csv
+#load router credentials from csv
 def load_router_info(file_path):
     router_info = {}
     with open(file_path, mode="r", encoding="utf8") as file:
@@ -22,7 +23,7 @@ def load_router_info(file_path):
             }
     return router_info
 
-# load mac addresses from json
+#load mac addresses from json
 def load_mac_addresses():
     try:
         with open(MAC_JSON, "r", encoding="utf8") as jsonfile:
@@ -34,7 +35,7 @@ def load_mac_addresses():
         print(f"error loading mac addresses from {MAC_JSON}: {str(e)}")
         return []
 
-# test ssh connection to a router
+#test ssh connection to a router
 def test_ssh_connection(credentials):
     try:
         net_connect = ConnectHandler(**credentials)
@@ -44,30 +45,78 @@ def test_ssh_connection(credentials):
         print(f"ssh connection failed for {credentials['host']}: {str(e)}")
         return False
 
-# get r5 global ipv6 address using r4's neighbor table
-def get_r5_ipv6_address(r4_creds, r5_host):
+#get r5 global ipv6 address using r4's neighbor table
+def get_r5_ipv6_address(r4_creds):
     try:
         net_connect = ConnectHandler(**r4_creds)
         output = net_connect.send_command("show ipv6 neighbors")
         net_connect.disconnect()
     except Exception as e:
-        print(f"failed to retrieve r5 mac address from r4: {str(e)}")
+        print(f"failed to retrieve r5 ipv6 address from r4: {str(e)}")
         return None
 
-    r5_mac = None
+    r5_ipv6 = None
     for line in output.split("\n"):
         parts = line.split()
-        if len(parts) > 2 and r5_host in parts[0]:  # match r5 ipv6 address in neighbor table
-            r5_mac = parts[1].replace(".", "").lower()
-            break
+        if len(parts) > 1 and parts[0].startswith("2001:1111:2222:3333"):  # match global IPv6
+            r5_ipv6 = parts[0]
+            break  # Stop at the first valid global IPv6
 
-    if not r5_mac:
-        print("error: could not determine r5 mac address from r4.")
+    if not r5_ipv6:
+        print("error: could not determine r5 global ipv6 address from r4.")
         return None
 
-    print(f"detected r5 mac address: {r5_mac}")
+    print(f"detected r5 global ipv6 address: {r5_ipv6}")
+    return r5_ipv6
 
-    return r5_host  # return r5 ipv6 address from csv
+#configure dhcp server on r5
+def configure_dhcp_on_r5(r5_creds, mac_addresses):
+    try:
+        net_connect = ConnectHandler(**r5_creds)
+
+        dhcp_config = [
+            "int fa0/0", 
+            "ip address 192.168.20.1 255.255.255.0",
+            "no sh",
+            "exit",
+            "ip dhcp excluded-address 192.168.20.1 192.168.20.10",  # exclude range
+            "ip dhcp pool DHCP_POOL",
+            "network 192.168.20.0 255.255.255.0",
+            "default-router 192.168.20.1",
+            "dns-server 8.8.8.8",
+            "exit",
+            "ip dhcp pool R2", 
+            "host 192.168.20.11 255.255.255.0",
+            f"client-identifier {mac_addresses[0]}",
+            "exit",
+            "ip dhcp pool R3", 
+            "host 192.168.20.12 255.255.255.0",
+            f"client-identifier {mac_addresses[1]}",
+            "exit" 
+            
+        ]
+
+        print("\nconfiguring dhcp on r5...")
+        output = net_connect.send_config_set(dhcp_config)
+        print(output)
+
+        net_connect.disconnect()
+        return True
+    except Exception as e:
+        print(f"failed to configure dhcp on r5: {str(e)}")
+        return False
+
+#retrieve dhcp bindings
+def get_dhcp_clients(r5_creds):
+    try:
+        time.sleep(15)
+        net_connect = ConnectHandler(**r5_creds)
+        output = net_connect.send_command("show ip dhcp binding")
+        net_connect.disconnect()
+        return output
+    except Exception as e:
+        print(f"failed to retrieve dhcp clients: {str(e)}")
+        return None
 
 if __name__ == "__main__":
     print("loading router and mac address data...")
@@ -82,15 +131,7 @@ if __name__ == "__main__":
         print(f"error: no mac address data found in {MAC_JSON}")
         exit()
 
-    print("\nloaded router information:")
-    for ipv6, data in router_info.items():
-        print(f"host: {data['host']}, ipv6: {ipv6}")
-
-    print("\nloaded mac addresses:")
-    for mac in mac_addresses:
-        print(f"mac address: {mac}")
-
-    # get first R4 found in csv
+    # get r4 credentials
     r4_host = next((ipv6 for ipv6 in router_info if "db8:1::2" in ipv6), None)
     if not r4_host:
         print("error: could not determine r4 ipv6 address.")
@@ -105,23 +146,17 @@ if __name__ == "__main__":
         exit()
     print("successfully connected to r4.")
 
-    # get first R5 found in csv
-    r5_host = next((ipv6 for ipv6 in router_info if "C805:17FF:FE5F:0" in ipv6), None)
+    # get r5 ipv6 address
+    r5_host = get_r5_ipv6_address(r4_creds)
     if not r5_host:
-        print("error: could not determine r5 ipv6 address.")
+        print("error: could not retrieve r5 ipv6 address from r4.")
         exit()
     print(f"\nr5 ipv6 address: {r5_host}")
 
-    # get r5 ipv6 address from r4 neighbor table
-    r5_ipv6 = get_r5_ipv6_address(r4_creds, r5_host)
-    if not r5_ipv6:
-        print("error: could not retrieve r5 ipv6 address from r4.")
-        exit()
-
     # get r5 credentials
-    r5_creds = router_info.get(r5_ipv6)
+    r5_creds = router_info.get(r5_host)
     if not r5_creds:
-        print(f"error: no credentials found for r5 ({r5_ipv6}).")
+        print(f"error: no credentials found for r5 ({r5_host}).")
         exit()
 
     print("\ntesting ssh connection to r5...")
@@ -130,4 +165,18 @@ if __name__ == "__main__":
         exit()
     print("successfully connected to r5.")
 
-    print("\nall data and connections verified successfully.")
+    # configure dhcp on r5
+    if not configure_dhcp_on_r5(r5_creds, mac_addresses):
+        print("error: failed to configure dhcp on r5.")
+        exit()
+
+    # get dhcp clients
+    print("\nretrieving dhcp clients...")
+    dhcp_clients = get_dhcp_clients(r5_creds)
+    if dhcp_clients:
+        print("\nlist of dhcp clients:\n")
+        print(dhcp_clients)
+    else:
+        print("error: could not retrieve dhcp clients.")
+
+    print("\nall tasks completed successfully.")
