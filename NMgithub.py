@@ -1,14 +1,20 @@
+#/usr/bin/env python3
 import os
-import csv
-from git import Repo
+import shutil
+import git
 from github import Github
+import csv
 
-#credentials
+
+
+#gitHub credentials and repository info
 GITHUB_USERNAME = "aibolkz"  # Your GitHub username
-REPO_NAME = "lab5-netman"  # Name of the repository
-LOCAL_REPO_PATH = "./lab5-netman"  # Local directory for the repository
+REPO_NAME = "NM_lab"  # Name of the repository
+LOCAL_REPO_PATH = "./lab5-git-new"  # Local directory for the repository
 
-#token from gitaccess.csv
+
+
+#read GitHub token csv
 def read_github_token():
     try:
         with open("gitaccess.csv", mode="r", encoding="utf8") as file:
@@ -19,66 +25,82 @@ def read_github_token():
     except FileNotFoundError:
         raise FileNotFoundError("gitaccess.csv file not found. Please create it with your GitHub token.")
 
-#GitHub API
+
+
+
+#gitHub API client
 GITHUB_TOKEN = read_github_token()
 github = Github(GITHUB_TOKEN)
 
+
+
+
+#create or clone the repository
 def create_or_clone_repo():
-    """new GitHub repository or clone an existing one."""
+    """Create a new GitHub repository or clone an existing one."""
     try:
-        # checkif the repository already exists
+        # Check repository  exists
         repo = github.get_user().get_repo(REPO_NAME)
         print(f"Repository '{REPO_NAME}' already exists. Cloning...")
-        Repo.clone_from(repo.clone_url, LOCAL_REPO_PATH)
+        git.Repo.clone_from(repo.clone_url, LOCAL_REPO_PATH)
     except Exception:
-        #new repository if it doesn't exist
+        #if  doesn't exist, create 
         print(f"Repository '{REPO_NAME}' does not exist. Creating...")
         repo = github.get_user().create_repo(REPO_NAME, private=True)
         print(f"Repository '{REPO_NAME}' created successfully.")
-        Repo.clone_from(repo.clone_url, LOCAL_REPO_PATH)
+        git.Repo.clone_from(repo.clone_url, LOCAL_REPO_PATH)
 
-def add_and_commit_files(repo, files):
-    """add and commit files to  local repository."""
-    repo.git.add(files)
-    repo.index.commit(f"Added/Updated {len(files)} files: {', '.join(files)}")
+
+
+#cp files to bnew local repository folder
+def copy_files_to_repo():
+    """Copy .txt and .jpg files to the local repository."""
+    files_to_copy = []
+    for file in os.listdir('.'):
+        if file.endswith(('.txt', '.jpg')):
+            files_to_copy.append(file)
+
+    if not os.path.exists(LOCAL_REPO_PATH):
+        os.makedirs(LOCAL_REPO_PATH)
+
+    for file in files_to_copy:
+        shutil.copy(file, LOCAL_REPO_PATH)
+        print(f"File {file} copied successfully.")
+
+
+
+#push the files to GitHub
+def add_and_commit_files(repo):
+    """Add files to Git and commit changes."""
+    repo.git.add(A=True)  # Add all new/modified files
+    repo.index.commit("Added new .txt and .jpg files")
+    print("Files committed.")
+
+
 
 def push_to_github(repo):
-    """push changes to the GitHub repository."""
+    """Push the changes to the GitHub repository."""
     origin = repo.remote(name="origin")
     origin.push()
     print("Changes pushed to GitHub.")
 
-def get_modified_files(repo):
-    """Get a list of modified files in the local repository."""
-    modified_files = [item.a_path for item in repo.index.diff(None)]
-    return modified_files
+
 
 def main():
-    #1reate or clone the repository
+    """Main function to execute the script."""
     create_or_clone_repo()
 
-    #2Initialize the local repository
-    repo = Repo(LOCAL_REPO_PATH)
+    #open repository
+    repo = git.Repo(LOCAL_REPO_PATH)
 
-    #3Add .txt and .jpg files to the repository
-    files_to_add = []
-    for root, _, files in os.walk(LOCAL_REPO_PATH):
-        for file in files:
-            if file.endswith((".txt", ".jpg")):
-                files_to_add.append(os.path.join(root, file))
+    #cp files  local repository
+    copy_files_to_repo()
 
-    if files_to_add:
-        add_and_commit_files(repo, files_to_add)
-        print(f"Added {len(files_to_add)} files to the repository.")
+    # 
+    add_and_commit_files(repo)
 
-    #4Compare modified files and push to GitHub
-    modified_files = get_modified_files(repo)
-    if modified_files:
-        print(f"Found {len(modified_files)} modified files: {', '.join(modified_files)}")
-        add_and_commit_files(repo, modified_files)
-        push_to_github(repo)
-    else:
-        print("No modified files found.")
+    # Push changes b
+    push_to_github(repo)
 
 if __name__ == "__main__":
     main()

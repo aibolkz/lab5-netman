@@ -57,7 +57,7 @@ def fetch_snmp_data(router_ips, oids):
     snmp_data = {}
 
     for router, ip in router_ips.items():
-        print(f"\nfetching snmp data from {router} ({ip})...")
+        print(f"\ngetting snmp data from {router} ({ip})...")
 
         ipv4_addresses = list(snmp_walk(ip, oids["OID_IF_IPV4"]).values())
         raw_ipv6_addresses = snmp_walk(ip, oids["OID_IF_IPV6"])
