@@ -1,0 +1,93 @@
+{
+    "R1": {
+        "ipv4_addresses": [
+            "192.168.30.1"
+        ],
+        "ipv6_addresses": [
+            "2001:3333:2222:1111::1"
+        ],
+        "interface_status": {
+            "1": "down",
+            "2": "up",
+            "3": "down",
+            "4": "down",
+            "5": "up",
+            "6": "up"
+        },
+        "cpu_utilization": "0%"
+    },
+    "R2": {
+        "ipv4_addresses": [
+            "192.168.20.15",
+            "192.168.30.12"
+        ],
+        "ipv6_addresses": [
+            "2001:1111:2222:3333:c802:16ff:fe89:0",
+            "2001:3333:2222:1111:c802:16ff:fe89:1c"
+        ],
+        "interface_status": {
+            "1": "up",
+            "2": "up",
+            "3": "down",
+            "4": "down",
+            "5": "up",
+            "6": "up"
+        },
+        "cpu_utilization": "0%"
+    },
+    "R3": {
+        "ipv4_addresses": [
+            "192.168.20.13",
+            "192.168.30.11"
+        ],
+        "ipv6_addresses": [
+            "2001:1111:2222:3333:c803:16ff:fed9:0",
+            "2001:3333:2222:1111:c803:16ff:fed9:1c"
+        ],
+        "interface_status": {
+            "1": "up",
+            "2": "up",
+            "3": "down",
+            "4": "down",
+            "5": "up",
+            "6": "up"
+        },
+        "cpu_utilization": "0%"
+    },
+    "R4": {
+        "ipv4_addresses": [
+            "192.168.10.4",
+            "192.168.20.14"
+        ],
+        "ipv6_addresses": [
+            "2001:db8:1::2",
+            "2001:1111:2222:3333::1"
+        ],
+        "interface_status": {
+            "1": "up",
+            "2": "up",
+            "3": "down",
+            "4": "down",
+            "5": "up",
+            "6": "up"
+        },
+        "cpu_utilization": "0%"
+    },
+    "R5": {
+        "ipv4_addresses": [
+            "192.168.20.1"
+        ],
+        "ipv6_addresses": [
+            "2001:1111:2222:3333:c805:17ff:fe5f:0"
+        ],
+        "interface_status": {
+            "1": "up",
+            "2": "down",
+            "3": "down",
+            "4": "down",
+            "5": "up",
+            "6": "up"
+        },
+        "cpu_utilization": "0%"
+    }
+}
